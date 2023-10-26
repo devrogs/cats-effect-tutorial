@@ -22,6 +22,7 @@ object CopyFolder extends IOApp {
       source      <- identify(Paths.get(args(0)))
       destination <- identify(Paths.get(args(1)))
       _           <- IO.raiseWhen(source.path.equals(destination.path))(new IllegalArgumentException("Origin and destination files are the same"))
+      _           <- IO.raiseUnless(source.exists)(new IllegalArgumentException(s"File or directory not found: ${source.path}"))
       count       <- copy(source, destination)
       _           <- IO.println(s"Finished copying $count files")
     } yield ExitCode.Success
@@ -33,16 +34,12 @@ object CopyFolder extends IOApp {
       count    <- copy(siblings, source, destination)
     } yield count
 
-  def cutRoot(paths: LazyList[Path]): IO[LazyList[Path]] = paths match {
-    case current #:: LazyList() => IO.pure(paths)
-    case current #:: rest => IO.pure(rest)
-  }
-
   def copy(siblings: LazyList[Path], source: IdentifiedPath, destination: IdentifiedPath): IO[Int] = siblings match {
     case current #:: rest =>
       for {
         currentDestination <- identify(resolveDestination(source, current, destination))
-        _                  <- IO.println(s"Copying $current to ${currentDestination.path}")
+        currentIdentified  <- identify(current)
+        _                  <- IO.whenA(currentIdentified.isDirectory)(IO.println(s"Copying ${currentIdentified.path} to ${currentDestination.path}"))
         countCurrent       <- identify(current).flatMap(path => copySingle(path, currentDestination))
         countRest          <- copy(rest, source, destination)
       } yield countCurrent + countRest
@@ -68,7 +65,7 @@ object CopyFolder extends IOApp {
         bytes <- inputOutputStreams(source.path, destination.path).use { case (in, out) =>
           transmit(in, out, new Array[Byte](1024 * 10), 0L)
         }
-        _     <- IO.println(s"${destination.path}: ${bytes} bytes")
+        _     <- IO.println(s"Copied ${source.path} to ${destination.path}: ${bytes} bytes")
       } yield 1
 
   def transmit(origin: InputStream, destination: OutputStream, buffer: Array[Byte], acc: Long): IO[Long] =
