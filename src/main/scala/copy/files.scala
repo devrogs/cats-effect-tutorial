@@ -14,7 +14,7 @@ import java.io.OutputStream
 import java.io.FileOutputStream
 import java.io.FileInputStream
 
-object CopyFolder extends IOApp {
+object CopyFiles extends IOApp {
 
   override def run(args: List[String]): IO[ExitCode] =
     for {

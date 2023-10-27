@@ -1,5 +1,5 @@
 .bloop
 .bsp
 .metals
-target
+target*
 project
